@@ -72,4 +72,40 @@ WHERE sv.visit_id = @id_visit;";
         }
         return visit;
     }
+
+    public async Task<int> AddVisitAsync(Visit visit)
+    {
+        using (var conn = new SqlConnection(_connectionString))
+        {
+            await conn.OpenAsync();
+            
+            string command = @"SELECT 1 FROM Visit WHERE visit_id = @id_visit";
+            using (var cmd = new SqlCommand(command, conn))
+            {
+                cmd.Parameters.AddWithValue("@id_visit", visit.visit_id);
+                var existingVisit = await cmd.ExecuteScalarAsync();
+                if (existingVisit != null) return -1;
+            }
+            
+            command = @"SELECT 1 FROM Client WHERE client_id = @id_client";
+            using (var cmd = new SqlCommand(command, conn))
+            {
+                cmd.Parameters.AddWithValue("id_client", visit.client.client_id);
+                var existingClient = await cmd.ExecuteScalarAsync();
+                if (existingClient == null) return -2;
+            }
+            
+            command = @"SELECT mechanic_id FROM Mechanic WHERE licence_number = @licence_number";
+            using (var cmd = new SqlCommand(command, conn))
+            {
+                cmd.Parameters.AddWithValue("@licence_number", visit.mechanic.licence_number);
+                var existingMechanic = await cmd.ExecuteScalarAsync();
+                if (existingMechanic == null) return -3;
+            }
+            
+            command = @"INSERT INTO Visit (visit_id, client_id, mechanic_id) 
+VALUES (@visit_id, @client_id, @mechanic_id)";
+            return 1;
+        }
+    }
 }
